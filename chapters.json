@@ -1,0 +1,21 @@
+{
+  "video_url": "https://drive.google.com/file/d/1x0ulquOmuFHxZ1wtK_ujtoeVzrU0evb2/view",
+  "reference_audio_url": "https://drive.google.com/file/d/1gFSF-bjX3_mWkrdEyMdJL6btqswXTU_K/view",
+  "transcript_duration": 39487.552,
+  "chapters": [
+    {"id": "01", "title": "HCC multidisciplinary case discussion", "start": 0, "end": 1968},
+    {"id": "02", "title": "Biomarker-guided therapy in advanced pancreatic cancer", "start": 2049, "end": 4699},
+    {"id": "03", "title": "Locoregional and systemic treatment in intermediate-stage HCC", "start": 4765, "end": 6795},
+    {"id": "04", "title": "Desmoid tumors - evolving local and systemic therapy", "start": 6866, "end": 8165},
+    {"id": "05", "title": "Conference ceremony and acknowledgments", "start": 8212, "end": 9487},
+    {"id": "06", "title": "Perioperative chemoimmunotherapy in early-stage lung cancer", "start": 17881, "end": 20331},
+    {"id": "07", "title": "ALK-positive lung cancer - CROWN trial update", "start": 20353, "end": 20976},
+    {"id": "08", "title": "Oncology and palliative care in Saudi healthcare transformation", "start": 21009, "end": 24632},
+    {"id": "09", "title": "Personalized care in high-risk early and metastatic breast cancer", "start": 24717, "end": 26229},
+    {"id": "10", "title": "Early triple-negative breast cancer - case discussion", "start": 26299, "end": 28485},
+    {"id": "11", "title": "Molecular progression and treatment switching in breast cancer", "start": 28547, "end": 32293},
+    {"id": "12", "title": "Subcutaneous pembrolizumab - evidence and delivery", "start": 32356, "end": 33461},
+    {"id": "13", "title": "Implementing subcutaneous immunotherapy in Saudi oncology centers", "start": 33461, "end": 36282},
+    {"id": "14", "title": "Nursing workshop - immunotherapy adverse events and subcutaneous administration", "start": 36282, "end": 39480}
+  ]
+}
