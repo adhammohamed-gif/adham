@@ -1,0 +1,128 @@
+name: Transcribe video
+
+on:
+  workflow_dispatch:
+    inputs:
+      drive_url:
+        description: 'Google Drive file link (Anyone with the link can view)'
+        required: true
+        type: string
+      language:
+        description: 'Language code: auto, en, ar, etc.'
+        default: auto
+        type: string
+      model:
+        description: 'Small is the recommended balance; medium is slower'
+        type: choice
+        options: [small, base, tiny, medium]
+        default: small
+
+permissions:
+  contents: read
+
+concurrency:
+  group: long-video-transcription
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      matrix: ${{ steps.split.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install download and audio tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install gdown==5.2.0
+          npm install --prefix work/artifact @actions/artifact@2
+      - name: Download video and split audio
+        id: split
+        env:
+          DRIVE_URL: ${{ inputs.drive_url }}
+        run: python pipeline.py prepare "$DRIVE_URL"
+      - name: Store individual audio chunks
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const {DefaultArtifactClient} = require(path.join(process.env.GITHUB_WORKSPACE, 'work/artifact/node_modules/@actions/artifact'));
+            const client = new DefaultArtifactClient();
+            const root = path.join(process.env.GITHUB_WORKSPACE, 'work/chunks');
+            const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
+            for (const chunk of manifest.chunks) {
+              const dir = path.join(root, chunk.id);
+              await client.uploadArtifact(`audio-${chunk.id}`,
+                [path.join(dir, 'audio.flac'), path.join(dir, 'chunk.json')], dir,
+                {retentionDays: 1, compressionLevel: 0});
+            }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manifest
+          path: work/chunks/manifest.json
+          retention-days: 1
+          if-no-files-found: error
+
+  transcribe:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: audio-${{ matrix.id }}
+          path: work/chunk
+      - name: Install Whisper
+        run: python -m pip install -r requirements.txt
+      - name: Transcribe chunk
+        env:
+          MODEL: ${{ inputs.model }}
+          LANGUAGE: ${{ inputs.language }}
+        run: python pipeline.py transcribe work/chunk --model "$MODEL" --language "$LANGUAGE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: text-${{ matrix.id }}
+          path: work/parts/*.json
+          retention-days: 1
+          if-no-files-found: error
+
+  combine:
+    needs: [prepare, transcribe]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: manifest
+          path: work
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: text-*
+          merge-multiple: true
+          path: work/parts
+      - name: Combine transcript and restore original timestamps
+        run: python pipeline.py merge work/manifest.json work/parts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: transcript-and-subtitles
+          path: output/
+          retention-days: 7
+          if-no-files-found: error
