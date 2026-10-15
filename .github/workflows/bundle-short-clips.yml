@@ -1,0 +1,53 @@
+name: Bundle short information clips
+on:
+  push:
+    branches: [main]
+    paths: [short_clips_bundle.json]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read completed export run
+        id: config
+        run: |
+          python - <<'PY'
+          import json,os
+          config=json.load(open('short_clips_bundle.json'))
+          assert isinstance(config['run_id'],int)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write(f"run_id={config['run_id']}\n")
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: short-clip-*
+          path: bundle/
+          run-id: ${{ steps.config.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: short-clips-index
+          path: bundle/index/
+          run-id: ${{ steps.config.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify complete clip set
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          config=json.load(open('short_clips_bundle.json'))
+          videos=list(Path('bundle').glob('short-clip-*/*.mp4'))
+          assert len(videos)==config['expected_clips'],f'Expected {config["expected_clips"]} videos, got {len(videos)}'
+          print(f'Bundle contains {len(videos)} finished MP4s and the topic index.')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: All-28-Breast-Cancer-Information-Clips
+          path: bundle/
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error
