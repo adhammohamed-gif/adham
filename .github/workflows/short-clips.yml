@@ -1,0 +1,84 @@
+name: Short information clips
+
+on:
+  push:
+    branches: [main]
+    paths: [short_clips_job.json]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: short-information-clips
+  cancel-in-progress: false
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Read job settings
+        id: settings
+        run: |
+          python - <<'PY'
+          import json,os
+          c=json.load(open('short_clips_job.json'))
+          if c['mode'] not in ['inspect','cut']:raise ValueError('Unknown job mode')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('mode='+c['mode']+'\n')
+          PY
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install gdown==5.2.0
+      - name: Install transcription model runtime
+        if: steps.settings.outputs.mode == 'inspect'
+        run: python -m pip install faster-whisper==1.2.1
+      - name: Inspect video and transcribe speech
+        if: steps.settings.outputs.mode == 'inspect'
+        run: python scripts/short_clips.py inspect
+      - uses: actions/upload-artifact@v4
+        if: steps.settings.outputs.mode == 'inspect'
+        with:
+          name: lecture-transcript-and-frames
+          path: work/analysis/
+          retention-days: 7
+          if-no-files-found: error
+      - name: Download video and validate reviewed clip ranges
+        if: steps.settings.outputs.mode == 'cut'
+        run: python scripts/short_clips.py prepare
+      - name: Install artifact uploader
+        if: steps.settings.outputs.mode == 'cut'
+        run: npm install --prefix work/artifact @actions/artifact@2
+      - name: Export clips and verify each is under five minutes
+        if: steps.settings.outputs.mode == 'cut'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs=require('fs');
+            const path=require('path');
+            const {spawnSync}=require('child_process');
+            const {DefaultArtifactClient}=require(path.join(process.env.GITHUB_WORKSPACE,'work/artifact/node_modules/@actions/artifact'));
+            const client=new DefaultArtifactClient();
+            const config=JSON.parse(fs.readFileSync('short_clips_job.json','utf8'));
+            for(const clip of config.clips){
+              const result=spawnSync('python',['scripts/short_clips.py','cut','--id',clip.id],{stdio:'inherit'});
+              if(result.status!==0)throw new Error(`Clip ${clip.id} failed`);
+              const dir=path.join(process.env.GITHUB_WORKSPACE,'work/exports',clip.id);
+              await client.uploadArtifact(`short-clip-${clip.id}`,fs.readdirSync(dir).map(f=>path.join(dir,f)),dir,{retentionDays:7,compressionLevel:0});
+              fs.rmSync(dir,{recursive:true});
+            }
+      - uses: actions/upload-artifact@v4
+        if: steps.settings.outputs.mode == 'cut'
+        with:
+          name: short-clips-index
+          path: |
+            work/reports/
+            short_clips_job.json
+          retention-days: 7
+          if-no-files-found: error
