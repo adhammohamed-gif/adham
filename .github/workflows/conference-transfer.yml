@@ -1,0 +1,59 @@
+name: Transfer existing conference chapters
+on:
+  push:
+    branches: [main]
+    paths: [conference_transfer_job.json]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: conference-drive-transfer
+  cancel-in-progress: false
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Read completed conference export run
+        id: config
+        run: |
+          python - <<'PY'
+          import json,os
+          config=json.load(open('conference_transfer_job.json'))
+          assert isinstance(config['source_run'],int)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write(f"run_id={config['source_run']}\n")
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: chapter-*
+          path: work/conference-originals/
+          run-id: ${{ steps.config.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Stage original bytes and checksums
+        run: python scripts/conference_transfer.py
+      - name: Install artifact uploader
+        run: npm install --prefix work/artifact @actions/artifact@2
+      - name: Upload bounded transfer files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs=require('fs');
+            const path=require('path');
+            const {DefaultArtifactClient}=require(path.join(process.env.GITHUB_WORKSPACE,'work/artifact/node_modules/@actions/artifact'));
+            const client=new DefaultArtifactClient();
+            const dir=path.join(process.env.GITHUB_WORKSPACE,'work/conference-transfer');
+            const manifest=JSON.parse(fs.readFileSync(path.join(dir,'manifest.json'),'utf8'));
+            await client.uploadArtifact('conference-transfer-manifest',[path.join(dir,'manifest.json')],dir,{retentionDays:1,compressionLevel:0});
+            for(const video of manifest.videos){
+              for(const part of video.parts){
+                const file=path.join(dir,part.file);
+                await client.uploadArtifact(part.artifact_name,[file],dir,{retentionDays:1,compressionLevel:0});
+                fs.unlinkSync(file);
+              }
+              core.info(`Staged conference chapter ${video.id} without changing video bytes`);
+            }
