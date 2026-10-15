@@ -1,5 +1,184 @@
 {
-  "mode": "inspect",
+  "mode": "cut",
   "source_url": "https://drive.google.com/file/d/1AvDAUt-Hcjzcw9fLo0PY0VVfKbGAqqS0/view",
-  "clips": []
+  "clips": [
+    {
+      "id": "01",
+      "title": "Breast cancer in Saudi Arabia and early detection",
+      "start": 132.65,
+      "end": 284.35
+    },
+    {
+      "id": "02",
+      "title": "Risk factors and what you can change",
+      "start": 285.25,
+      "end": 484.25
+    },
+    {
+      "id": "03",
+      "title": "Breast anatomy and warning signs",
+      "start": 484.65,
+      "end": 698.9
+    },
+    {
+      "id": "04",
+      "title": "Breast self-awareness and clinical examination",
+      "start": 700.35,
+      "end": 824.75
+    },
+    {
+      "id": "05",
+      "title": "What to expect during a mammogram",
+      "start": 825.55,
+      "end": 917.95
+    },
+    {
+      "id": "06",
+      "title": "When to start screening and higher-risk assessment",
+      "start": 918.25,
+      "end": 1128.0
+    },
+    {
+      "id": "07",
+      "title": "Diagnostic tests and why a biopsy matters",
+      "start": 1131.5,
+      "end": 1305.0,
+      "ranges": [
+        [
+          1131.5,
+          1143.43
+        ],
+        [
+          1158.65,
+          1305.0
+        ]
+      ]
+    },
+    {
+      "id": "08",
+      "title": "Understanding breast cancer stages",
+      "start": 1311.05,
+      "end": 1443.25
+    },
+    {
+      "id": "09",
+      "title": "After diagnosis - support and the tumor board",
+      "start": 1443.35,
+      "end": 1555.35
+    },
+    {
+      "id": "10",
+      "title": "Surgery and breast reconstruction options",
+      "start": 1561.25,
+      "end": 1673.1
+    },
+    {
+      "id": "11",
+      "title": "Chemotherapy fears - side effects and patient support",
+      "start": 1679.5,
+      "end": 1825.4
+    },
+    {
+      "id": "12",
+      "title": "Radiotherapy and systemic treatment explained",
+      "start": 1827.25,
+      "end": 1863.2
+    },
+    {
+      "id": "13",
+      "title": "Breast cancer myths and who can be affected",
+      "start": 1866.5,
+      "end": 2022.15
+    },
+    {
+      "id": "14",
+      "title": "Prevention habits - screening reminders and resources",
+      "start": 2023.45,
+      "end": 2181.2
+    },
+    {
+      "id": "15",
+      "title": "QA - Mammography and follow-up after treatment",
+      "start": 2233.0,
+      "end": 2345.0
+    },
+    {
+      "id": "16",
+      "title": "QA - Supporting mental health during treatment",
+      "start": 2348.8,
+      "end": 2472.2
+    },
+    {
+      "id": "17",
+      "title": "QA - Warning signs breast pain and seeking care",
+      "start": 2472.1,
+      "end": 2621.3
+    },
+    {
+      "id": "18",
+      "title": "QA - How breast cancer develops and spreads",
+      "start": 2622.1,
+      "end": 2696.2
+    },
+    {
+      "id": "19",
+      "title": "QA - Nutrition stress and energy during treatment",
+      "start": 2696.2,
+      "end": 2866.5
+    },
+    {
+      "id": "20",
+      "title": "QA - Biopsy and benign breast lumps",
+      "start": 2872.6,
+      "end": 2920.6
+    },
+    {
+      "id": "21",
+      "title": "QA - Hormone treatment pregnancy and fertility",
+      "start": 2950.2,
+      "end": 3080.9
+    },
+    {
+      "id": "22",
+      "title": "QA - Family history BRCA testing and counseling",
+      "start": 3091.55,
+      "end": 3204.6
+    },
+    {
+      "id": "23",
+      "title": "QA - Why local breast cancer research matters",
+      "start": 3218.0,
+      "end": 3354.4
+    },
+    {
+      "id": "24",
+      "title": "QA - Self-checks before 40 and persistent breast pain",
+      "start": 3354.05,
+      "end": 3408.3
+    },
+    {
+      "id": "25",
+      "title": "QA - Breast implants reduction surgery and screening",
+      "start": 3413.1,
+      "end": 3501.6
+    },
+    {
+      "id": "26",
+      "title": "QA - BRCA risk and genetic counseling",
+      "start": 3502.4,
+      "end": 3667.1
+    },
+    {
+      "id": "27",
+      "title": "QA - Mammogram radiation safety",
+      "start": 3718.6,
+      "end": 3767.9
+    },
+    {
+      "id": "28",
+      "title": "QA - Discussing diagnosis with older patients and families",
+      "start": 3840.95,
+      "end": 4025.0
+    }
+  ]
 }

@@ -45,9 +45,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: steps.settings.outputs.mode == 'inspect'
         with:
-          name: lecture-transcript-and-frames
-          path: work/analysis/
-          retention-days: 7
+          name: lecture-transcript
+          path: |
+            work/analysis/transcript.json
+            work/analysis/transcript.txt
+            work/analysis/transcript.srt
+          retention-days: 30
           if-no-files-found: error
       - name: Download video and validate reviewed clip ranges
         if: steps.settings.outputs.mode == 'cut'
@@ -70,9 +73,19 @@ jobs:
               const result=spawnSync('python',['scripts/short_clips.py','cut','--id',clip.id],{stdio:'inherit'});
               if(result.status!==0)throw new Error(`Clip ${clip.id} failed`);
               const dir=path.join(process.env.GITHUB_WORKSPACE,'work/exports',clip.id);
-              await client.uploadArtifact(`short-clip-${clip.id}`,fs.readdirSync(dir).map(f=>path.join(dir,f)),dir,{retentionDays:7,compressionLevel:0});
+              const uploaded=await client.uploadArtifact(`short-clip-${clip.id}`,fs.readdirSync(dir).map(f=>path.join(dir,f)),dir,{retentionDays:30,compressionLevel:0});
+              const reportPath=path.join(process.env.GITHUB_WORKSPACE,'work/reports',`${clip.id}.json`);
+              const report=JSON.parse(fs.readFileSync(reportPath,'utf8'));
+              report.download_url=`${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}/artifacts/${uploaded.id}`;
+              fs.writeFileSync(reportPath,JSON.stringify(report,null,2));
               fs.rmSync(dir,{recursive:true});
             }
+            const rows=[['ID','Topic','Duration (seconds)','Source start (seconds)','Source end (seconds)','Download']];
+            for(const clip of config.clips){
+              const report=JSON.parse(fs.readFileSync(path.join('work/reports',`${clip.id}.json`),'utf8'));
+              rows.push([report.id,report.title,report.actual_duration,report.start,report.end,report.download_url]);
+            }
+            fs.writeFileSync('work/reports/Clip-index.csv',rows.map(row=>row.map(value=>'"'+String(value).replace(/"/g,'""')+'"').join(',')).join('\n')+'\n');
       - uses: actions/upload-artifact@v4
         if: steps.settings.outputs.mode == 'cut'
         with:
@@ -80,5 +93,5 @@ jobs:
           path: |
             work/reports/
             short_clips_job.json
-          retention-days: 7
+          retention-days: 30
           if-no-files-found: error

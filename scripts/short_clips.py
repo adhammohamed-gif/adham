@@ -77,8 +77,13 @@ def validate_clips(config, duration):
         start,end=clip['start'],clip['end']
         if not all(isinstance(t,(int,float)) and math.isfinite(t) for t in [start,end]):
             raise ValueError('Timestamps must be finite numbers')
-        if not 0<=start<end<=duration+.05 or end-start>MAX_SECONDS:
+        ranges=clip.get('ranges',[[start,end]])
+        if not ranges or any(len(r)!=2 or not all(isinstance(t,(int,float)) and math.isfinite(t) for t in r) for r in ranges):
+            raise ValueError('Invalid component ranges')
+        if any(not 0<=a<b<=duration+.05 for a,b in ranges) or sum(b-a for a,b in ranges)>MAX_SECONDS:
             raise ValueError(f"Invalid range or clip over five minutes: {clip['id']}")
+        if start!=ranges[0][0] or end!=ranges[-1][1] or any(ranges[i][1]>ranges[i+1][0] for i in range(len(ranges)-1)):
+            raise ValueError('Component ranges must be ordered and match the outer timestamps')
         if not clip.get('title','').strip():
             raise ValueError('Each clip needs an informative title')
 
@@ -88,21 +93,35 @@ def prepare(config):
     validate_clips(config,float(metadata['format']['duration']))
     Path('work/exports').mkdir(exist_ok=True)
     Path('work/reports').mkdir(exist_ok=True)
-    print(f"Prepared {len(config['clips'])} topic clips; maximum requested duration {max(c['end']-c['start'] for c in config['clips']):.2f}s")
+    maximum=max(sum(b-a for a,b in c.get('ranges',[[c['start'],c['end']]])) for c in config['clips'])
+    print(f"Prepared {len(config['clips'])} topic clips; maximum requested duration {maximum:.2f}s")
 
 
 def cut(config, identifier):
     source=Path('work/source.mp4')
     validate_clips(config,float(probe(source)['format']['duration']))
     clip=next(c for c in config['clips'] if c['id']==identifier)
-    duration=clip['end']-clip['start']
+    ranges=clip.get('ranges',[[clip['start'],clip['end']]])
+    duration=sum(b-a for a,b in ranges)
     folder=Path('work/exports')/clip['id'];folder.mkdir(parents=True,exist_ok=True)
     slug=re.sub(r'[^\w-]+','-',clip['title'],flags=re.UNICODE).strip('-')[:90]
     output=folder/f"{clip['id']}-{slug}.mp4"
-    subprocess.run(['ffmpeg','-v','error','-y','-ss',str(clip['start']),'-i',str(source),'-t',f'{duration:.3f}',
-        '-map','0:v:0','-map','0:a:0?','-vf','pad=ceil(iw/2)*2:ceil(ih/2)*2',
-        '-c:v','libx264','-preset','veryfast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','128k',
-        '-movflags','+faststart',str(output)],check=True)
+    command=['ffmpeg','-v','error','-y']
+    if len(ranges)==1:
+        command+=['-ss',str(clip['start']),'-i',str(source),'-t',f'{duration:.3f}',
+                  '-map','0:v:0','-map','0:a:0?','-vf','pad=ceil(iw/2)*2:ceil(ih/2)*2']
+    else:
+        filters=[];concat=[]
+        for i,(start,end) in enumerate(ranges):
+            command+=['-ss',str(start),'-t',f'{end-start:.3f}','-i',str(source)]
+            filters += [f'[{i}:v:0]setpts=PTS-STARTPTS,pad=ceil(iw/2)*2:ceil(ih/2)*2[v{i}]',
+                        f'[{i}:a:0]asetpts=PTS-STARTPTS[a{i}]']
+            concat += [f'[v{i}][a{i}]']
+        filters+=[''.join(concat)+f'concat=n={len(ranges)}:v=1:a=1[vout][aout]']
+        command+=['-filter_complex',';'.join(filters),'-map','[vout]','-map','[aout]']
+    command+=['-c:v','libx264','-preset','veryfast','-crf','20','-pix_fmt','yuv420p',
+              '-c:a','aac','-b:a','128k','-movflags','+faststart',str(output)]
+    subprocess.run(command,check=True)
     info=probe(output);actual=float(info['format']['duration'])
     if actual>300 or actual<max(0,duration-1):
         raise ValueError(f'Export duration check failed: {actual}s')
